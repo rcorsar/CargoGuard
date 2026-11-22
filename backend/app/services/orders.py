@@ -34,10 +34,24 @@ def _move(db, order: dict, target: str, fields: dict) -> dict:
     return updated
 
 
+def _as_float(value, label: str) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise AppError(400, f"{label} указана неверно")
+
+
+def _as_int(value, label: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise AppError(400, f"{label} указан неверно")
+
+
 def create_order(db, body: dict) -> dict:
     require_role(body.get("role"), "create_order")
-    weight = float(body.get("weightKg") or 0)
-    amount = int(body.get("amount") or 0)
+    weight = _as_float(body.get("weightKg"), "Масса")
+    amount = _as_int(body.get("amount"), "Сумма")
     if amount <= 0:
         raise AppError(400, "Сумма заказа должна быть больше нуля")
     name = str(body.get("name") or "").strip()
@@ -89,6 +103,7 @@ def create_order(db, body: dict) -> dict:
 def attach_photo(db, order_id: str, body: dict, payload: bytes | None) -> dict:
     require_role(body.get("role"), "photo")
     order = _order(db, order_id)
+    had_photo = bool(order.get("photoPath"))
     if payload:
         name = save_upload(order_id, payload)
     else:
@@ -98,6 +113,8 @@ def attach_photo(db, order_id: str, body: dict, payload: bytes | None) -> dict:
         {"$set": {"photoPath": name}},
         return_document=ReturnDocument.AFTER,
     )
+    if had_photo:
+        return {"order": public(updated), "photoPath": name}
     log = add_log(
         db,
         updated,
@@ -259,14 +276,14 @@ def save_settings(db, body: dict) -> dict:
     rate = current["commissionRate"]
     tariffs = dict(current["tariffs"])
     if body.get("commissionPct") is not None:
-        pct = float(body["commissionPct"])
+        pct = _as_float(body["commissionPct"], "Комиссия")
         if pct < 0 or pct > 25:
             raise AppError(400, "Комиссия задаётся от 0 до 25 процентов")
         rate = pct / 100
     for key, field in (("0-3", "tariff1"), ("3-20", "tariff2"), ("20+", "tariff3")):
         if body.get(field) is None:
             continue
-        value = int(body[field])
+        value = _as_int(body[field], "Тариф")
         if value <= 0:
             raise AppError(400, "Тариф должен быть больше нуля")
         tariffs[key] = value

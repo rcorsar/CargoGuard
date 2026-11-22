@@ -120,7 +120,6 @@ function startAICameraScan() {
 
   setTimeout(async () => {
     AppState.isScanningNow = false;
-    AppState.qrScanned = true;
     const nowStr = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     if (ApiService.isBackendConnected) {
       const photoRes = await ApiService.post(`/api/orders/${box.id}/photo-card`, {
@@ -130,10 +129,16 @@ function startAICameraScan() {
       if (photoRes && photoRes.ok && photoRes.data && photoRes.data.order) {
         replaceOrder(photoRes.data.order);
         if (photoRes.data.log) AppState.logs.unshift(photoRes.data.log);
-        renderAll();
+        renderControllerShiftTable();
+        renderSecurityLogView();
+        StorageService.saveState(AppState);
+      } else if (photoRes && !photoRes.ok && !photoRes.offline) {
+        const detail = photoRes.data && photoRes.data.detail ? photoRes.data.detail : "Кадр не сохранился";
+        showToast(detail);
       }
     }
 
+    AppState.qrScanned = true;
     stage.classList.remove("visible");
     camBox.classList.remove("scanning");
     camBox.classList.add("scanned");

@@ -36,9 +36,21 @@ async function createOrderFromAccounting(event) {
   const newQr = `5POST-QR-${Math.floor(10000 + Math.random() * 89999)}`;
   const nowStr = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 
-  await ApiService.post("/api/orders", {
+  const res = await ApiService.post("/api/orders", {
+    role: AppState.currentRole,
     buyer, buyerPhone, buyerAccount, seller, sellerAccount, name, specs, weightKg, amount, actorName
   });
+  if (ApiService.isBackendConnected) {
+    if (serverRefused(res)) return;
+    replaceOrder(res.data.order);
+    if (res.data.log) AppState.logs.unshift(res.data.log);
+    StorageService.saveState(AppState);
+    document.getElementById("accOrderForm").reset();
+    updateCommissionPreview();
+    renderAll();
+    showToast(`Заказ ${res.data.order.id} заморожен и передан контролеру`);
+    return;
+  }
 
   AppState.orders.unshift({
     id: newId,
@@ -92,7 +104,19 @@ async function accountingCompleteDeal(boxId) {
   const { commission, sellerPayout } = calculateCommission(order.amount, AppState.commissionRate);
   const pct = Math.round(AppState.commissionRate * 100);
 
-  await ApiService.post(`/api/orders/${boxId}/complete`, { actorName });
+  const res = await ApiService.post(`/api/orders/${boxId}/complete`, {
+    role: AppState.currentRole,
+    actorName
+  });
+  if (ApiService.isBackendConnected) {
+    if (serverRefused(res)) return;
+    replaceOrder(res.data.order);
+    if (res.data.log) AppState.logs.unshift(res.data.log);
+    StorageService.saveState(AppState);
+    renderAll();
+    showToast(res.data.repeated ? `Сделка ${boxId} уже закрыта` : `Сделка ${boxId} закрыта`);
+    return;
+  }
 
   order.stage = "deal_closed";
   order.commission = commission;
@@ -125,7 +149,19 @@ async function sendOrderToReturn(boxId) {
   if (!order) return;
 
   const actorName = document.getElementById("activeUserName").textContent;
-  await ApiService.post(`/api/orders/${boxId}/return`, { actorName });
+  const res = await ApiService.post(`/api/orders/${boxId}/return`, {
+    role: AppState.currentRole,
+    actorName
+  });
+  if (ApiService.isBackendConnected) {
+    if (serverRefused(res)) return;
+    replaceOrder(res.data.order);
+    if (res.data.log) AppState.logs.unshift(res.data.log);
+    StorageService.saveState(AppState);
+    renderAll();
+    showToast(`Заказ ${boxId} передан на проверку возврата`);
+    return;
+  }
 
   order.stage = "warehouse_return";
   order.moneyStatus = "Заморожены (Возврат из ПВЗ)";

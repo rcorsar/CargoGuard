@@ -118,10 +118,21 @@ function startAICameraScan() {
     scanBtn.textContent = "⏳ Сканирование...";
   }, 550);
 
-  setTimeout(() => {
+  setTimeout(async () => {
     AppState.isScanningNow = false;
     AppState.qrScanned = true;
     const nowStr = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    if (ApiService.isBackendConnected) {
+      const photoRes = await ApiService.post(`/api/orders/${box.id}/photo-card`, {
+        role: AppState.currentRole,
+        actorName: document.getElementById("activeUserName").textContent
+      });
+      if (photoRes && photoRes.ok && photoRes.data && photoRes.data.order) {
+        replaceOrder(photoRes.data.order);
+        if (photoRes.data.log) AppState.logs.unshift(photoRes.data.log);
+        renderAll();
+      }
+    }
 
     stage.classList.remove("visible");
     camBox.classList.remove("scanning");
@@ -215,7 +226,8 @@ async function recordInspectionDecision(isApproved) {
   const timeNow = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
   const flowName = AppState.currentDirection === "send" ? "Отправка" : "Возврат";
 
-  await ApiService.post(`/api/orders/${box.id}/inspect`, {
+  const res = await ApiService.post(`/api/orders/${box.id}/inspect`, {
+    role: AppState.currentRole,
     direction: AppState.currentDirection,
     approved: isApproved,
     qrScanned: AppState.qrScanned,
@@ -223,6 +235,15 @@ async function recordInspectionDecision(isApproved) {
     note,
     actorName
   });
+  if (ApiService.isBackendConnected) {
+    if (serverRefused(res)) return;
+    replaceOrder(res.data.order);
+    if (res.data.log) AppState.logs.unshift(res.data.log);
+    StorageService.saveState(AppState);
+    showToast(res.data.repeated ? `Осмотр ${box.id} уже сохранён` : `Осмотр ${box.id} сохранён`);
+    renderAll();
+    return;
+  }
 
   let statusDesc = "";
   if (AppState.currentDirection === "send") {

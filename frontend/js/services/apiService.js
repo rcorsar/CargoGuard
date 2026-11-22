@@ -1,4 +1,4 @@
-// Ready-to-connect REST API Client for Backend Integration
+// Клиент API. Пока сервер молчит, страница остаётся на своих демо-данных.
 const ApiService = {
   baseUrl: APP_CONFIG.API_BASE_URL,
   isBackendConnected: false,
@@ -17,28 +17,40 @@ const ApiService = {
   },
 
   async post(endpoint, payload) {
-    if (!this.isBackendConnected) return null;
-    try {
-      const res = await fetch(`${this.baseUrl}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      return await res.json();
-    } catch (e) {
-      this.isBackendConnected = false;
-      return null;
-    }
+    return this._send("POST", endpoint, payload);
   },
 
   async remove(endpoint) {
-    if (!this.isBackendConnected) return null;
+    return this._send("DELETE", endpoint, null);
+  },
+
+  async _send(method, endpoint, payload) {
+    if (!this.isBackendConnected) return { ok: false, offline: true, data: null };
     try {
-      const res = await fetch(`${this.baseUrl}${endpoint}`, { method: "DELETE" });
-      return await res.json();
+      const options = { method, headers: {} };
+      if (payload) {
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(payload);
+      }
+      const res = await fetch(`${this.baseUrl}${endpoint}`, options);
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
     } catch (e) {
       this.isBackendConnected = false;
-      return null;
+      return { ok: false, offline: true, data: null };
     }
   }
 };
+
+function replaceOrder(order) {
+  const index = AppState.orders.findIndex((item) => item.id === order.id);
+  if (index >= 0) AppState.orders[index] = order;
+  else AppState.orders.unshift(order);
+}
+
+function serverRefused(res) {
+  if (!res || res.offline || res.ok) return false;
+  const detail = res.data && res.data.detail ? res.data.detail : "Сервер отклонил действие";
+  showToast(detail);
+  return true;
+}

@@ -3,8 +3,20 @@
 Информационная система контроля целостности и антифрода высокотехнологичной продукции в сети пунктов выдачи 5Post.
 
 ## Структура репозитория
-- `frontend/` — клиентская часть (HTML5, CSS3, JavaScript), разделена по модулям (`css/`, `js/config/`, `js/data/`, `js/services/`, `js/ui/`, `js/modules/`). Работает в браузере напрямую при открытии `frontend/index.html`.
-- `backend/` — каркас серверной части для разработки API и БД (контракт маршрутов описан в `backend/README.md`).
+- `frontend/` — страница в браузере.
+- `backend/` — Python, REST и MongoDB. Запуск и роли описаны в `backend/README.md`.
+- `docs/course/` — схемы и результаты проверок для пояснительной записки.
 
-## Быстрый запуск фронтенда
-Откройте `frontend/index.html` двойным кликом в любом современном браузере. Все изменения сохраняются в `localStorage`.
+## Запуск стенда
+Служба MongoDB должна быть запущена. Дальше:
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Откройте http://127.0.0.1:8000/
+
+Если сервер выключен, страница открывается файлом `frontend/index.html` и хранит демо-данные в браузере.

@@ -31,6 +31,12 @@ function applyRoleAccess(role) {
     btnAdm.classList.add("hidden");
     btnSec.classList.remove("hidden");
     switchMainTab("accounting");
+  } else if (role === "security") {
+    btnWork.classList.add("hidden");
+    btnAcc.classList.add("hidden");
+    btnAdm.classList.add("hidden");
+    btnSec.classList.remove("hidden");
+    switchMainTab("security");
   } else {
     btnWork.classList.remove("hidden");
     btnAcc.classList.remove("hidden");

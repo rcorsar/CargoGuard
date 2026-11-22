@@ -11,8 +11,13 @@ async function saveAdminSettings() {
     tariff1,
     tariff2,
     tariff3
+  }).then((res) => {
+    if (ApiService.isBackendConnected && serverRefused(res)) return;
+    applyAdminSettings(commissionPct, tariff1, tariff2, tariff3);
   });
+}
 
+function applyAdminSettings(commissionPct, tariff1, tariff2, tariff3) {
   if (!isNaN(commissionPct) && commissionPct >= 0 && commissionPct <= 25) {
     AppState.commissionRate = commissionPct / 100;
   }
@@ -27,7 +32,8 @@ async function saveAdminSettings() {
 }
 
 async function adminDeleteOrder(boxId) {
-  await ApiService.remove(`/api/orders/${boxId}?role=${AppState.currentRole}`);
+  const res = await ApiService.remove(`/api/orders/${boxId}?role=${AppState.currentRole}`);
+  if (ApiService.isBackendConnected && serverRefused(res)) return;
   AppState.orders = AppState.orders.filter((o) => o.id !== boxId);
   StorageService.saveState(AppState);
   renderAll();

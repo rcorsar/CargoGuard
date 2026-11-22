@@ -1,7 +1,8 @@
 // Audit & Security Log Module (ReadOnly for Controller/Accounting, Delete for Admin)
 async function adminDeleteLog(logId) {
   if (AppState.currentRole !== "admin") return;
-  await ApiService.remove(`/api/logs/${logId}?role=${AppState.currentRole}`);
+  const res = await ApiService.remove(`/api/logs/${logId}?role=${AppState.currentRole}`);
+  if (ApiService.isBackendConnected && serverRefused(res)) return;
   AppState.logs = AppState.logs.filter((l) => l.id !== logId);
   StorageService.saveState(AppState);
   renderAll();

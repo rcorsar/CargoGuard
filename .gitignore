@@ -8,3 +8,7 @@ venv/
 node_modules/
 .DS_Store
 uploads/
+backend/photos/*
+!backend/photos/.gitkeep
+.pytest_cache/
+backend/course_checks.json

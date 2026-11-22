@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CargoGuard — 5Post</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="assets/logo-5post.svg" alt="5Post CargoGuard" class="brand-logo-img">
+    <div class="brand-title">CargoGuard</div>
+  </div>
+  <div class="header-controls">
+    <div class="role-switcher">
+      <span class="role-switcher-label">Роль:</span>
+      <select id="roleSelect" class="role-select" onchange="onRoleChange()">
+        <option value="controller">ИИ-система / Контролер</option>
+        <option value="accounting">Бухгалтерия</option>
+        <option value="admin">Администратор (Всё)</option>
+      </select>
+    </div>
+    <span id="activeUserName" class="meta-pill">Мамбетов Р. Р.</span>
+    <span id="activePointName" class="meta-pill">ПВЗ #5042</span>
+    <button id="themeToggleBtn" class="theme-toggle" onclick="toggleTheme()">Темная тема</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="nav-tabs">
+    <button id="tabBtnWorkplace" class="tab-btn active" onclick="switchMainTab('workplace')">
+      Рабочий стол (Контролер)
+    </button>
+    <button id="tabBtnAccounting" class="tab-btn hidden" onclick="switchMainTab('accounting')">
+      Бухгалтерия (Счета и 3%)
+      <span id="accBadgeCount" class="badge-count">0</span>
+    </button>
+    <button id="tabBtnAdmin" class="tab-btn hidden" onclick="switchMainTab('admin')">
+      Админ-панель
+    </button>
+    <button id="tabBtnSecurity" class="tab-btn" onclick="switchMainTab('security')">
+      Журнал операций
+      <span id="secBadgeCount" class="badge-count">3</span>
+    </button>
+  </div>
+
+  <!-- ВКЛАДКА 1: РАБОЧИЙ СТОЛ КОНТРОЛЕРА -->
+  <div id="viewWorkplace" class="workspace-grid">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Приемка и проверка товара</h2>
+          <span class="role-tag">ИИ-система / Контролер</span>
+        </div>
+
+        <div class="mode-switch">
+          <div id="modeSendCard" class="mode-card active-send" onclick="setInspectionDirection('send')">
+            <div class="mode-title">📦 Обычная отправка</div>
+            <div class="mode-desc">Проверка после сортировки по весу</div>
+          </div>
+          <div id="modeReturnCard" class="mode-card" onclick="setInspectionDirection('return')">
+            <div class="mode-title">↩️ Возврат из ПВЗ</div>
+            <div class="mode-desc">Проверка на подмену и возврат средств</div>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <div>
+            <label>Коробка на столе</label>
+            <select id="boxSelect" onchange="onBoxSelectChange()"></select>
+          </div>
+          <div>
+            <label>Категория веса</label>
+            <select id="weightCategorySelect" onchange="onWeightCategoryChange()">
+              <option value="0-3">0–3 кг (500–700 ₽)</option>
+              <option value="3-20">3–20 кг (700–1500 ₽)</option>
+              <option value="20+">20+ кг (от 1500 ₽)</option>
+            </select>
+          </div>
+          <div>
+            <label>Вес</label>
+            <input type="text" id="autoWeightInput" readonly value="1.6 кг">
+          </div>
+          <div>
+            <label>Тариф</label>
+            <div id="tariffBadge" class="weight-badge-highlight">+650 ₽</div>
+          </div>
+        </div>
+
+        <div id="aiCamContainer" class="ai-camera-box">
+          <div class="cam-top-bar">
+            <div class="cam-status-indicator">
+              <span id="camPulse" class="pulse-dot"></span>
+              <span id="camStatusText">Ожидание сканирования</span>
+            </div>
+            <span id="scanTimestamp" style="color:#94A3B8;">Ожидание</span>
+          </div>
+
+          <div id="camFeedStage" class="camera-feed-stage">
+            <div class="laser-line"></div>
+            <div id="camStageMessage" style="font-size:13.5px; color:#38BDF8; padding:10px 0;">
+              📷 Открытие камеры...
+            </div>
+          </div>
+
+          <div class="cam-grid-details">
+            <div><span class="cam-field-label">QR-код</span><span id="valQr" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Товар</span><span id="valName" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Характеристики / S/N</span><span id="valSpecs" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Вес</span><span id="valWeight" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Продавец</span><span id="valSeller" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Покупатель и сумма</span><span id="valBuyer" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Сроки</span><span id="valDates" class="cam-field-val">—</span></div>
+            <div><span class="cam-field-label">Дефекты</span><span id="valDefects" class="cam-field-val">—</span></div>
+          </div>
+
+          <button id="btnScanQR" class="btn btn-scan" onclick="startAICameraScan()">
+            🔍 Сканировать QR-код (ИИ-система)
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Вскрытие и чек-лист проверки</h2>
+        </div>
+
+        <div id="checklistBox" class="checklist-wrapper">
+          <label class="chk-item">
+            <input type="checkbox" class="chk-step" onchange="validateChecklist()">
+            <span id="chkLabel1">Коробка вскрыта под камерой, товар соответствует описанию</span>
+          </label>
+          <label class="chk-item">
+            <input type="checkbox" class="chk-step" onchange="validateChecklist()">
+            <span id="chkLabel2">Серийный номер и пломбы совпадают</span>
+          </label>
+          <label class="chk-item">
+            <input type="checkbox" class="chk-step" onchange="validateChecklist()">
+            <span id="chkLabel3">Брак и повреждения отсутствуют</span>
+          </label>
+        </div>
+
+        <div>
+          <label>Комментарий</label>
+          <input type="text" id="inspectorComment" placeholder="Причина отказа, брака или примечание...">
+        </div>
+
+        <div id="validationAlert" class="validation-alert">
+          Отсканируйте QR-код ИИ-камерой и отметьте пункты чек-листа
+        </div>
+
+        <div class="decision-row">
+          <button id="btnGreenApprove" class="btn btn-approve" disabled onclick="recordInspectionDecision(true)">
+            ✅ Товар без брака → Доставка в ПВЗ
+          </button>
+          <button id="btnRedReject" class="btn btn-reject" disabled onclick="recordInspectionDecision(false)">
+            ❌ Брак → Возврат продавцу (3 дня) / утилизация
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Выработка за сегодня</h2>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div id="kpiTotalBoxes" class="kpi-value">3</div>
+            <div class="kpi-label">Проверено коробок</div>
+          </div>
+          <div class="kpi-card">
+            <div id="kpiTotalRub" class="kpi-value">3 200 ₽</div>
+            <div class="kpi-label">Начислено за смену</div>
+          </div>
+        </div>
+
+        <div class="tariff-info-box">
+          <strong>Тарифы:</strong> 0–3 кг: 500–700 ₽ • 3–20 кг: 700–1500 ₽ • 20+ кг: от 1500 ₽
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Время</th>
+                <th>Товар</th>
+                <th>Вес</th>
+                <th>Решение</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody id="shiftHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 2: БУХГАЛТЕРИЯ -->
+  <div id="viewAccounting" class="hidden">
+    <div class="kpi-grid-4">
+      <div class="kpi-card">
+        <div id="accKpiFrozen" class="kpi-value blue">0 ₽</div>
+        <div class="kpi-label">Заморожено на счете 5Post</div>
+      </div>
+      <div class="kpi-card">
+        <div id="accKpiComm" class="kpi-value">0 ₽</div>
+        <div class="kpi-label">Комиссия 5Post (<span id="accCommHint">3%</span>)</div>
+      </div>
+      <div class="kpi-card">
+        <div id="accKpiPaid" class="kpi-value purple">0 ₽</div>
+        <div class="kpi-label">Выплачено продавцам</div>
+      </div>
+      <div class="kpi-card">
+        <div id="accKpiRefund" class="kpi-value amber">0 ₽</div>
+        <div class="kpi-label">Возвращено покупателям</div>
+      </div>
+    </div>
+
+    <div class="accounting-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Новый заказ: данные и заморозка</h2>
+          <span class="role-tag blue">Бухгалтерия</span>
+        </div>
+        <form id="accOrderForm" onsubmit="createOrderFromAccounting(event)">
+          <div class="form-grid-2">
+            <div>
+              <label>ФИО покупателя</label>
+              <input type="text" id="accBuyerName" placeholder="Иванов И. И." required>
+            </div>
+            <div>
+              <label>Телефон покупателя</label>
+              <input type="text" id="accBuyerPhone" placeholder="+7 (978) 111-22-33" required>
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label>Расчетный счет / карта покупателя</label>
+            <input type="text" id="accBuyerAccount" placeholder="40817810... (Сбер / Тинькофф)" required>
+          </div>
+          <div class="form-grid-2">
+            <div>
+              <label>Продавец (ФИО / ИП)</label>
+              <input type="text" id="accSellerName" placeholder="ИП Петров А. С." required>
+            </div>
+            <div>
+              <label>Счет продавца</label>
+              <input type="text" id="accSellerAccount" placeholder="40802810... (РНКБ / Тинькофф)" required>
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label>Наименование товара</label>
+            <input type="text" id="accItemName" placeholder="Видеокарта RTX 4080 / Стиральная машина..." required>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label>Характеристики и S/N</label>
+            <input type="text" id="accItemSpecs" placeholder="S/N, пломбы, комплектация">
+          </div>
+          <div class="form-grid-2">
+            <div>
+              <label>Вес посылки (кг)</label>
+              <input type="number" id="accWeight" step="0.1" min="0.1" placeholder="2.4" required>
+            </div>
+            <div>
+              <label>Сумма заказа (₽)</label>
+              <input type="number" id="accAmount" step="100" min="500" placeholder="65000" oninput="updateCommissionPreview()" required>
+            </div>
+          </div>
+
+          <div class="commission-preview-box">
+            <span>Комиссия 5Post (<strong id="previewCommPct">3%</strong>): <strong id="previewCommRub">0 ₽</strong></span>
+            <span>Продавцу: <strong id="previewSellerRub">0 ₽</strong></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;">
+            Заморозить средства и передать на склад
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Реестр счетов, эскроу и комиссии 3%</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Заказ / QR</th>
+                <th>Товар</th>
+                <th>Покупатель и счет</th>
+                <th>Продавец и счет</th>
+                <th>Сумма / Комиссия 3%</th>
+                <th>Этап</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody id="accountingOrdersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 3: АДМИН-ПАНЕЛЬ -->
+  <div id="viewAdmin" class="hidden">
+    <div class="admin-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Сотрудники и права доступа</h2>
+          <span class="role-tag purple">Администратор</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Сотрудник</th>
+                <th>Роль</th>
+                <th>Точка</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Настройки комиссии 5Post и тарифов</h2>
+        </div>
+        <div class="form-grid-2">
+          <div>
+            <label>Комиссия 5Post (%)</label>
+            <input type="number" id="admCommissionPct" min="0" max="25" value="3">
+          </div>
+          <div>
+            <label>Тариф 0–3 кг (₽)</label>
+            <input type="number" id="admTariff1" value="600">
+          </div>
+          <div>
+            <label>Тариф 3–20 кг (₽)</label>
+            <input type="number" id="admTariff2" value="1100">
+          </div>
+          <div>
+            <label>Тариф 20+ кг (₽)</label>
+            <input type="number" id="admTariff3" value="1750">
+          </div>
+        </div>
+        <div class="action-stack">
+          <button class="btn btn-primary" onclick="saveAdminSettings()">Сохранить параметры</button>
+          <button class="btn btn-outline" onclick="adminResetDemoData()">Сбросить демо-данные</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Управление всеми заказами (Полный доступ)</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Товар</th>
+              <th>Сумма и комиссия</th>
+              <th>Этап процесса</th>
+              <th>Действие</th>
+            </tr>
+          </thead>
+          <tbody id="adminOrdersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 4: ЖУРНАЛ ОПЕРАЦИЙ -->
+  <div id="viewSecurity" class="card hidden">
+    <div class="card-header">
+      <h2 class="card-title">Журнал операций и споров</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата и время</th>
+            <th>QR / Коробка</th>
+            <th>Этап</th>
+            <th>Товар</th>
+            <th>Вес</th>
+            <th>Участники</th>
+            <th>Статус</th>
+            <th>Исполнитель</th>
+            <th>Доступ</th>
+          </tr>
+        </thead>
+        <tbody id="securityHistoryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Подключение модулей в порядке зависимостей (работает по file:// без сервера) -->
+<script src="js/config/constants.js"></script>
+<script src="js/data/mockUsers.js"></script>
+<script src="js/data/mockOrders.js"></script>
+<script src="js/data/mockLogs.js"></script>
+<script src="js/services/storageService.js"></script>
+<script src="js/services/apiService.js"></script>
+<script src="js/ui/notifications.js"></script>
+<script src="js/ui/themeManager.js"></script>
+<script src="js/ui/navigation.js"></script>
+<script src="js/modules/controllerModule.js"></script>
+<script src="js/modules/accountingModule.js"></script>
+<script src="js/modules/adminModule.js"></script>
+<script src="js/modules/securityLogModule.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
